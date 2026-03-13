@@ -1,3 +1,4 @@
+import secrets
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -5,14 +6,14 @@ from functools import lru_cache
 class Settings(BaseSettings):
     # Application
     APP_NAME: str = "AI-Powered LMS"
-    DEBUG: bool = True
+    DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
     # Database
     DATABASE_URL: str = "postgresql://lms:lms_password@localhost:5432/lms_db"
 
     # JWT
-    JWT_SECRET_KEY: str = "your-super-secret-key-change-in-production"
+    JWT_SECRET_KEY: str = secrets.token_urlsafe(32)
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7

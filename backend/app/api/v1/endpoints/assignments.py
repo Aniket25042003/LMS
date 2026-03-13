@@ -21,7 +21,8 @@ student_only = RoleChecker([UserRole.STUDENT])
 @router.get("", response_model=List[AssignmentResponse])
 async def list_assignments(
     course_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     course = await course_service.get_course_by_id(db, course_id)
     if not course:
@@ -52,7 +53,8 @@ async def create_assignment(
 async def get_assignment(
     course_id: int,
     assignment_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     assignment = await assignment_service.get_assignment_by_id(db, assignment_id)
     if not assignment or assignment.course_id != course_id:

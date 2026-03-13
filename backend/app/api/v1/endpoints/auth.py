@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.schemas.token import Token
+from app.schemas.token import Token, RefreshTokenRequest
 from app.schemas.user import UserResponse, PasswordReset
 from app.services import user as user_service
 from app.core.security import (
@@ -49,10 +49,10 @@ async def login(
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(
-    refresh_token: str,
+    body: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    token_data = decode_token(refresh_token)
+    token_data = decode_token(body.refresh_token)
     if token_data.token_type != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

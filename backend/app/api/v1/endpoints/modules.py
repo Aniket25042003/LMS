@@ -17,7 +17,8 @@ teacher_admin = RoleChecker([UserRole.TEACHER, UserRole.ADMIN])
 @router.get("", response_model=List[ModuleResponse])
 async def list_modules(
     course_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     course = await course_service.get_course_by_id(db, course_id)
     if not course:

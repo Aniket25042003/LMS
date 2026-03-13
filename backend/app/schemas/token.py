@@ -10,3 +10,7 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: str
     token_type: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

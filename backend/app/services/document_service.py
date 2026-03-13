@@ -1,10 +1,13 @@
 import io
+import logging
 import uuid
 from typing import List
 from fastapi import UploadFile, HTTPException
 
 from app.ai.embedding import embed_documents, upsert_vectors
 from app.ai.chat import process_document
+
+logger = logging.getLogger(__name__)
 
 
 async def extract_text_from_file(file: UploadFile) -> str:
@@ -19,7 +22,8 @@ async def extract_text_from_file(file: UploadFile) -> str:
                 text += page.extract_text() + "\n"
             return text
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to extract PDF text: {str(e)}")
+            logger.exception("Failed to extract PDF text")
+            raise HTTPException(status_code=400, detail="Failed to extract text from PDF file")
     
     elif file.content_type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
         try:
@@ -28,7 +32,8 @@ async def extract_text_from_file(file: UploadFile) -> str:
             text = "\n".join([para.text for para in doc.paragraphs])
             return text
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to extract Word text: {str(e)}")
+            logger.exception("Failed to extract Word text")
+            raise HTTPException(status_code=400, detail="Failed to extract text from Word file")
     
     elif file.content_type == "text/plain":
         return content.decode("utf-8")

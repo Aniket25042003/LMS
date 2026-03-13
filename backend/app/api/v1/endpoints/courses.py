@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.schemas.course import CourseCreate, CourseUpdate, CourseResponse, EnrollResponse, EnrollmentResponse
 from app.schemas.user import UserResponse
 from app.services import course as course_service
+from app.services import user as user_service
 from app.core.security import get_current_user, RoleChecker
 from app.models.user import User, UserRole
 
@@ -20,7 +21,8 @@ student_only = RoleChecker([UserRole.STUDENT])
 async def list_courses(
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     courses = await course_service.get_courses(db, skip, limit)
     return courses
@@ -39,7 +41,8 @@ async def create_course(
 @router.get("/{course_id}", response_model=CourseResponse)
 async def get_course(
     course_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     course = await course_service.get_course_by_id(db, course_id)
     if not course:
@@ -115,7 +118,7 @@ async def get_enrolled_students(
     enrollments = await course_service.get_enrollments(db, course_id)
     students = []
     for enrollment in enrollments:
-        student = await course_service.get_user_by_id(db, enrollment.user_id)
+        student = await user_service.get_user_by_id(db, enrollment.user_id)
         if student:
             students.append(student)
     return students

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+import logging
 
 from app.db.session import get_db
 from app.schemas.document import DocumentResponse, ChatMessage, ChatResponse
@@ -14,10 +15,19 @@ from app.ai import grader as grader_service
 from app.core.security import get_current_user, RoleChecker
 from app.models.user import User, UserRole
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/courses/{course_id}", tags=["AI"])
 
 teacher_admin = RoleChecker([UserRole.TEACHER, UserRole.ADMIN])
 student_only = RoleChecker([UserRole.STUDENT])
+
+ALLOWED_FILE_TYPES = {
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
+}
+MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
 
 
 @router.post("/documents", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -33,6 +43,20 @@ async def upload_document(
     
     if course.teacher_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Not authorized")
+    
+    if file.content_type not in ALLOWED_FILE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file type. Allowed types: PDF, DOCX, TXT"
+        )
+    
+    contents = await file.read()
+    if len(contents) > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB"
+        )
+    await file.seek(0)
     
     result = await doc_ingest.ingest_document(course_id, file.filename, file)
     
@@ -84,7 +108,8 @@ async def chat(
             course_context=course.description or ""
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
+        logger.exception("Chat error for course %s", course_id)
+        raise HTTPException(status_code=500, detail="An internal error occurred while processing the chat request")
     
     from app.models.chat_history import ChatHistory
     chat_record = ChatHistory(
@@ -131,7 +156,8 @@ async def grade_with_ai(
             course_id=assignment.course_id
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Grading error: {str(e)}")
+        logger.exception("Grading error for assignment %s", assignment_id)
+        raise HTTPException(status_code=500, detail="An internal error occurred while grading the submission")
     
     await assignment_service.update_ai_grade(db, submission.id, grade, feedback)
     
