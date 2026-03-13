@@ -50,6 +50,12 @@ async def upload_document(
             detail="Unsupported file type. Allowed types: PDF, DOCX, TXT"
         )
     
+    if file.size is not None and file.size > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB"
+        )
+    
     contents = await file.read()
     if len(contents) > MAX_UPLOAD_SIZE_BYTES:
         raise HTTPException(
